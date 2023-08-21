@@ -6,6 +6,7 @@ services:
       CURRENCY_PAIRS: ${CURRENCY_PAIRS:-BTC-USD}
       FETCH_INTERVAL: ${FETCH_INTERVAL-5}
       OSCILLATION: ${OSCILLATION-0.01}
+      RATE: ${RATE-BID}
     ports:
       - "3001:3000"
     command: npm run dev
