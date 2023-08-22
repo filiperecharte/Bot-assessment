@@ -1,12 +1,17 @@
 {
-    "name": "uphold-bot-api",
+    "name": "uphold-bot",
     "version": "1.0.0",
     "main": "bot.js",
+    "type": "commonjs",
     "scripts": {
-        "dev": "nodemon bot.js",
-        "prod": "node bot.js"
+        "dev": "nodemon run.js",
+        "prod": "node run.js",
+        "test": "npx jest"
     },
     "dependencies": {
         "axios": "^1.4.0"
+    },
+    "devDependencies": {
+        "jest": "^29.6.3"
     }
 }
