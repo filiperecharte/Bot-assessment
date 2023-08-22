@@ -1,5 +1,7 @@
 const axios = require('axios');
 
+const { saveAlert } = require('./connect');
+
 var fetching;
 
 function startFetch(botConfig) {
@@ -26,7 +28,6 @@ function fetch(botConfig) {
         )
         .catch(
             (error) => {
-                console.log(`Error fetching ${currencyPair}`);
                 handleErrors(botConfig, error.response.data, currencyPair);
             },
         );
@@ -48,16 +49,22 @@ function handleFetch(botConfig, currentFetch) {
     currentFetch.percentageChange = currentInitialRate === 0 ? 0 : ((currentFetchRate - currentInitialRate) / currentInitialRate) * 100;
 
     if (Math.abs(currentFetch.percentageChange).toFixed(2) >= botConfig.oscillation) {
-        logAlert(botConfig, currentFetch);
+        createAlert(botConfig, currentFetch);
     }
 }
 
-function logAlert(botConfig, currentFetch) {
-    if (currentFetch.percentageChange > 0) {
-        console.log(`[ ${currentFetch.date} ] ${currentFetch.currencyPair} ${botConfig.rate} PRICE INCREASED ${currentFetch.percentageChange.toFixed(2)}%`);
-    } else {
-        console.log(`[ ${currentFetch.date} ] ${currentFetch.currencyPair} ${botConfig.rate} PRICE DECREASED ${Math.abs(currentFetch.percentageChange).toFixed(2)}%`);
-    }
+function createAlert(botConfig, currentFetch) {
+    const alert = {
+        currencyPair: currentFetch.currencyPair,
+        rate: botConfig.rate,
+        direction: currentFetch.percentageChange > 0 ? 'UP' : 'DOWN',
+        percentageChange: Math.abs(currentFetch.percentageChange.toFixed(2)),
+        date: currentFetch.date,
+    };
+
+    console.log(`[ ${alert.date} ] ${alert.currencyPair} ${alert.rate} PRICE ${alert.direction} ${alert.percentageChange}%`);
+    
+    saveAlert(botConfig, currentFetch);
 }
 
 function handleErrors(botConfig, error, currencyPair) {
