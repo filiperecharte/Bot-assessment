@@ -1,50 +1,88 @@
 const axios = require('axios');
+var { saveAlert } = require('./database.js');
+var { startFetch, fetch, handleFetch, handleErrors, setupFetch } = require('./bot.js');
+
 jest.mock('axios');
 
-var { fetch, handleFetch, handleErrors } = require('./bot.js');
+jest.mock('./database', () => {
+  return {
+      ...jest.requireActual('./database'),
+      saveAlert: jest.fn(),
+  };
+});
 
 describe('Bot functions', () => {
 
-    beforeAll(() => {
-        botConfig = {
-            currencyPairs: ["BTC-USD", "ETH-USD"],
-            rate: 'BID',
-            oscillation: 0.01,
-            fetchInterval: 5,
-            initialRate: new Map(),
-        };
-    });
+  beforeEach(() => {
+    //setup bot configuration
+      botConfig = {
+          currencyPairs: ["BTC-USD", "ETH-USD"],
+          rate: 'BID',
+          oscillation: 0.01,
+          fetchInterval: 5,
+          initialRate: new Map(),
+      };
 
-  test('fetch should call axios.get correctly', async () => {
-
-    const mockResponse = { 
+      //simulate response from API
+      mockResponse = { 
         data: { bid: '26130.3060620596', ask: '26015.5743912126', currency: 'USD'}, 
-        headers: { Date: 'Mon, 21 Aug 2023 20:28:27 GMT' }
-    };
+        headers: { date: 'Mon, 21 Aug 2023 20:28:27 GMT' }
+      };
 
-    axios.get.mockResolvedValue(mockResponse);
-
-    await fetch(botConfig);
-
-    expect(axios.get).toHaveBeenCalledTimes(2);
-    expect(axios.get).toHaveBeenCalledWith('https://api.uphold.com/v0/ticker/BTC-USD');
-  });
-
-  test('handleFetch should calculate percentage change correctly', () => {
-    botConfig.initialRate.set('BTC-USD', { bid: '26110.3060620596', ask: '26015.5743912126' });
-
-    const currentFetch = {
-        bidRate: '26130.3060620596',
-        askRate: '26015.5743912126',
-        currency: 'USD',
+      firstFetch = {
+        bidRate: '26001.3060620596',
+        askRate: '26001.5743912126',
+        currency: mockResponse.data.currency,
+        date: mockResponse.headers.date,
         currencyPair: 'BTC-USD',
-        date: 'Mon, 21 Aug 2023 20:28:27 GMT',
         percentageChange: 0,
     };
 
+      currentFetch = {
+        bidRate: '26110.3060620596',
+        askRate: '26012.5743912126',
+        currency: mockResponse.data.currency,
+        date: mockResponse.headers.date,
+        currencyPair: 'BTC-USD',
+        percentageChange: 0,
+    };
+  });
+
+  afterEach(() => {
+      jest.clearAllMocks();
+  });
+
+
+  test('fetch should call axios.get correctly', async () => {
+    axios.get.mockResolvedValue(mockResponse);
+
+    fetch(botConfig);
+
+    expect(axios.get).toHaveBeenCalledTimes(botConfig.currencyPairs.length);
+    for (const currencyPair of botConfig.currencyPairs) {
+      expect(axios.get).toHaveBeenCalledWith(`https://api.uphold.com/v0/ticker/${currencyPair}`);
+    }
+  });
+
+  test('handleFetch should calculate percentage change correctly', () => {
+    setupFetch(botConfig, firstFetch);
+
     handleFetch(botConfig, currentFetch);
 
-    expect(currentFetch.percentageChange).toBe(0.07659810632806648);
+    const alert = {
+        currencyPair: currentFetch.currencyPair,
+        rate: botConfig.rate,
+        direction: currentFetch.percentageChange > 0 ? 'UP' : 'DOWN',
+        percentageChange: currentFetch.percentageChange,
+        date: currentFetch.date,
+    };
+
+    const currentInitialRate =botConfig.initialRate.get(currentFetch.currencyPair).bid;
+    const currentFetchRate = currentFetch.bidRate;
+    const percentage = Math.abs(((currentFetchRate - currentInitialRate) / currentInitialRate) * 100).toFixed(2)
+
+    expect(currentFetch.percentageChange).toBe(percentage);
+    expect(saveAlert).toHaveBeenCalledWith(botConfig, alert);
   });
 
   test('handleErrors should handle not found error correctly', () => {
@@ -53,10 +91,13 @@ describe('Bot functions', () => {
         message: 'Not Found',
     };
 
-    handleErrors(botConfig, errorResponseData, 'BTC-USD');
+    const failedCurrencyPair = botConfig.currencyPairs[0];
 
-    expect(botConfig.currencyPairs).toEqual(["ETH-USD"]);
+    handleErrors(botConfig, errorResponseData, botConfig.currencyPairs[0]);
+
+    expect(botConfig.currencyPairs.includes(failedCurrencyPair)).toEqual(false);
   });
+
 
   test('handleErrors should handle too many requests error correctly', () => {
     const errorResponseData = {
@@ -64,9 +105,38 @@ describe('Bot functions', () => {
         message: 'Too Many Requests',
     };
 
-    handleErrors(botConfig, errorResponseData, 'BTC-USD');
+    const previousFetchInterval = botConfig.fetchInterval;
 
-    expect(botConfig.fetchInterval).toBe(10);
+    handleErrors(botConfig, errorResponseData, botConfig.currencyPairs[0]);
+
+    expect(botConfig.fetchInterval).toBe(previousFetchInterval + 5);
   });
 
+
+  test('should call fetch with botConfig and schedule subsequent fetches', async () => {
+      jest.useFakeTimers();
+
+      axios.get.mockResolvedValue(mockResponse);
+
+      startFetch(botConfig);
+
+      expect(axios.get).toHaveBeenCalledTimes(botConfig.currencyPairs.length);
+      for (const currencyPair of botConfig.currencyPairs) {
+        expect(axios.get).toHaveBeenCalledWith(`https://api.uphold.com/v0/ticker/${currencyPair}`);
+      }
+
+      jest.advanceTimersByTime(botConfig.fetchInterval * 1000);
+
+      expect(axios.get).toHaveBeenCalledTimes(botConfig.currencyPairs.length * 2);
+      for (const currencyPair of botConfig.currencyPairs) {
+        expect(axios.get).toHaveBeenCalledWith(`https://api.uphold.com/v0/ticker/${currencyPair}`);
+      }
+
+      jest.advanceTimersByTime(botConfig.fetchInterval * 1000);
+
+      expect(axios.get).toHaveBeenCalledTimes(botConfig.currencyPairs.length * 3);
+      for (const currencyPair of botConfig.currencyPairs) {
+        expect(axios.get).toHaveBeenCalledWith(`https://api.uphold.com/v0/ticker/${currencyPair}`);
+      }
+  });
 });

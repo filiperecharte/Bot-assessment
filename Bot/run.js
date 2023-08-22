@@ -1,5 +1,5 @@
 const { startFetch, stopFetch } = require('./bot');
-const { connectDB, saveBot } = require('./connect');
+const { connectDB, saveBot } = require('./database');
 
 function run() {
     const clientDB = connectDB();
@@ -13,6 +13,8 @@ function run() {
         clientDB: clientDB,
         id: null,
     };
+
+    console.log(botConfig.currencyPairs)
 
     saveBot(botConfig).then(() => {
         console.log(`Bot ${botConfig.id} saved`);

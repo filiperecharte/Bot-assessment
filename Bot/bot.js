@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const { saveAlert } = require('./connect');
+const {saveAlert} = require('./database.js');
 
 var fetching;
 
@@ -22,6 +22,10 @@ function fetch(botConfig) {
                     date: response.headers.date,
                     percentageChange: 0,
                 };
+
+                if (currentFetch.bidRate === undefined || currentFetch.askRate === undefined || currentFetch.currency === undefined) {
+                    throw { response: { data: { code: 'not_found', message: `Currency pair ${currencyPair} not found.`}}};
+                }
 
                 botConfig.initialRate.has(currencyPair) ? handleFetch(botConfig, currentFetch) : setupFetch(botConfig, currentFetch);
             },
@@ -46,25 +50,26 @@ function handleFetch(botConfig, currentFetch) {
     const currentFetchRate = botConfig.rate === 'BID' ? currentFetch.bidRate : currentFetch.askRate;
 
     // Calculate the percentage change
-    currentFetch.percentageChange = currentInitialRate === 0 ? 0 : ((currentFetchRate - currentInitialRate) / currentInitialRate) * 100;
+    currentFetch.percentageChange = currentInitialRate === 0 ? 0 : Math.abs(((currentFetchRate - currentInitialRate) / currentInitialRate) * 100).toFixed(2);
 
-    if (Math.abs(currentFetch.percentageChange).toFixed(2) >= botConfig.oscillation) {
+    if (currentFetch.percentageChange >= botConfig.oscillation) {
         createAlert(botConfig, currentFetch);
     }
 }
 
 function createAlert(botConfig, currentFetch) {
+
     const alert = {
         currencyPair: currentFetch.currencyPair,
         rate: botConfig.rate,
         direction: currentFetch.percentageChange > 0 ? 'UP' : 'DOWN',
-        percentageChange: Math.abs(currentFetch.percentageChange.toFixed(2)),
+        percentageChange: currentFetch.percentageChange,
         date: currentFetch.date,
     };
 
     console.log(`[ ${alert.date} ] ${alert.currencyPair} ${alert.rate} PRICE ${alert.direction} ${alert.percentageChange}%`);
     
-    saveAlert(botConfig, currentFetch);
+    saveAlert(botConfig, alert);
 }
 
 function handleErrors(botConfig, error, currencyPair) {
@@ -90,7 +95,9 @@ function stopFetch() {
 module.exports = {
     fetch,
     handleFetch,
+    setupFetch,
     handleErrors,
     startFetch,
     stopFetch,
+    createAlert,
 };
