@@ -46,6 +46,8 @@ describe('Bot functions', () => {
         currencyPair: 'BTC-USD',
         percentageChange: 0,
     };
+
+    console.log = jest.fn();
   });
 
   afterEach(() => {
@@ -64,6 +66,7 @@ describe('Bot functions', () => {
     }
   });
 
+
   test('handleFetch should calculate percentage change correctly', () => {
     setupFetch(botConfig, firstFetch);
 
@@ -77,13 +80,10 @@ describe('Bot functions', () => {
         date: currentFetch.date,
     };
 
-    const currentInitialRate =botConfig.initialRate.get(currentFetch.currencyPair).bid;
-    const currentFetchRate = currentFetch.bidRate;
-    const percentage = Math.abs(((currentFetchRate - currentInitialRate) / currentInitialRate) * 100).toFixed(2)
-
-    expect(currentFetch.percentageChange).toBe(percentage);
+    expect(currentFetch.percentageChange).toBe('0.42');
     expect(saveAlert).toHaveBeenCalledWith(botConfig, alert);
   });
+  
 
   test('handleErrors should handle not found error correctly', () => {
     const errorResponseData = {
