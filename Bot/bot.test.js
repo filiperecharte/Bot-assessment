@@ -5,9 +5,9 @@ var { startFetch, fetch, handleFetch, handleErrors, setupFetch } = require('./bo
 jest.mock('axios');
 
 jest.mock('./database', () => {
-  return {
-      ...jest.requireActual('./database'),
-      saveAlert: jest.fn(),
+    return {
+    ...jest.requireActual('./database'),
+    saveAlert: jest.fn(),
   };
 });
 
@@ -15,43 +15,43 @@ describe('Bot functions', () => {
 
   beforeEach(() => {
     //setup bot configuration
-      botConfig = {
-          currencyPairs: ["BTC-USD", "ETH-USD"],
-          rate: 'BID',
-          oscillation: 0.01,
-          fetchInterval: 5,
-          initialRate: new Map(),
-      };
-
-      //simulate response from API
-      mockResponse = { 
-        data: { bid: '26130.3060620596', ask: '26015.5743912126', currency: 'USD'}, 
-        headers: { date: 'Mon, 21 Aug 2023 20:28:27 GMT' }
-      };
-
-      firstFetch = {
-        bidRate: '26001.3060620596',
-        askRate: '26001.5743912126',
-        currency: mockResponse.data.currency,
-        date: mockResponse.headers.date,
-        currencyPair: 'BTC-USD',
-        percentageChange: 0,
+    botConfig = {
+      currencyPairs: ["BTC-USD", "ETH-USD"],
+      rate: 'BID',
+      oscillation: 0.01,
+      fetchInterval: 5,
+      initialRate: new Map(),
     };
 
-      currentFetch = {
-        bidRate: '26110.3060620596',
-        askRate: '26012.5743912126',
-        currency: mockResponse.data.currency,
-        date: mockResponse.headers.date,
-        currencyPair: 'BTC-USD',
-        percentageChange: 0,
+    //simulate response from API
+    mockResponse = { 
+      data: { bid: '26130.3060620596', ask: '26015.5743912126', currency: 'USD'}, 
+      headers: { date: 'Mon, 21 Aug 2023 20:28:27 GMT' }
+    };
+
+    firstFetch = {
+      bidRate: '26001.3060620596',
+      askRate: '26001.5743912126',
+      currency: mockResponse.data.currency,
+      date: mockResponse.headers.date,
+      currencyPair: 'BTC-USD',
+      percentageChange: 0,
+    };
+
+    currentFetch = {
+      bidRate: '26110.3060620596',
+      askRate: '26012.5743912126',
+      currency: mockResponse.data.currency,
+      date: mockResponse.headers.date,
+      currencyPair: 'BTC-USD',
+      percentageChange: 0,
     };
 
     console.log = jest.fn();
   });
 
   afterEach(() => {
-      jest.clearAllMocks();
+    jest.clearAllMocks();
   });
 
 
@@ -73,22 +73,22 @@ describe('Bot functions', () => {
     handleFetch(botConfig, currentFetch);
 
     const alert = {
-        currencyPair: currentFetch.currencyPair,
-        rate: botConfig.rate,
-        direction: currentFetch.percentageChange > 0 ? 'UP' : 'DOWN',
-        percentageChange: currentFetch.percentageChange,
-        date: currentFetch.date,
+      currencyPair: currentFetch.currencyPair,
+      rate: botConfig.rate,
+      direction: currentFetch.percentageChange > 0 ? 'UP' : 'DOWN',
+      percentageChange: currentFetch.percentageChange,
+      date: currentFetch.date,
     };
 
     expect(currentFetch.percentageChange).toBe('0.42');
     expect(saveAlert).toHaveBeenCalledWith(botConfig, alert);
   });
-  
+
 
   test('handleErrors should handle not found error correctly', () => {
     const errorResponseData = {
-        code: 'not_found',
-        message: 'Not Found',
+      code: 'not_found',
+      message: 'Not Found',
     };
 
     const failedCurrencyPair = botConfig.currencyPairs[0];
@@ -101,8 +101,8 @@ describe('Bot functions', () => {
 
   test('handleErrors should handle too many requests error correctly', () => {
     const errorResponseData = {
-        code: 'too_many_requests',
-        message: 'Too Many Requests',
+      code: 'too_many_requests',
+      message: 'Too Many Requests',
     };
 
     const previousFetchInterval = botConfig.fetchInterval;
@@ -114,29 +114,29 @@ describe('Bot functions', () => {
 
 
   test('should call fetch with botConfig and schedule subsequent fetches', async () => {
-      jest.useFakeTimers();
+    jest.useFakeTimers();
 
-      axios.get.mockResolvedValue(mockResponse);
+    axios.get.mockResolvedValue(mockResponse);
 
-      startFetch(botConfig);
+    startFetch(botConfig);
 
-      expect(axios.get).toHaveBeenCalledTimes(botConfig.currencyPairs.length);
-      for (const currencyPair of botConfig.currencyPairs) {
-        expect(axios.get).toHaveBeenCalledWith(`https://api.uphold.com/v0/ticker/${currencyPair}`);
-      }
+    expect(axios.get).toHaveBeenCalledTimes(botConfig.currencyPairs.length);
+    for (const currencyPair of botConfig.currencyPairs) {
+      expect(axios.get).toHaveBeenCalledWith(`https://api.uphold.com/v0/ticker/${currencyPair}`);
+    }
 
-      jest.advanceTimersByTime(botConfig.fetchInterval * 1000);
+    jest.advanceTimersByTime(botConfig.fetchInterval * 1000);
 
-      expect(axios.get).toHaveBeenCalledTimes(botConfig.currencyPairs.length * 2);
-      for (const currencyPair of botConfig.currencyPairs) {
-        expect(axios.get).toHaveBeenCalledWith(`https://api.uphold.com/v0/ticker/${currencyPair}`);
-      }
+    expect(axios.get).toHaveBeenCalledTimes(botConfig.currencyPairs.length * 2);
+    for (const currencyPair of botConfig.currencyPairs) {
+      expect(axios.get).toHaveBeenCalledWith(`https://api.uphold.com/v0/ticker/${currencyPair}`);
+    }
 
-      jest.advanceTimersByTime(botConfig.fetchInterval * 1000);
+    jest.advanceTimersByTime(botConfig.fetchInterval * 1000);
 
-      expect(axios.get).toHaveBeenCalledTimes(botConfig.currencyPairs.length * 3);
-      for (const currencyPair of botConfig.currencyPairs) {
-        expect(axios.get).toHaveBeenCalledWith(`https://api.uphold.com/v0/ticker/${currencyPair}`);
-      }
+    expect(axios.get).toHaveBeenCalledTimes(botConfig.currencyPairs.length * 3);
+    for (const currencyPair of botConfig.currencyPairs) {
+      expect(axios.get).toHaveBeenCalledWith(`https://api.uphold.com/v0/ticker/${currencyPair}`);
+    }
   });
 });

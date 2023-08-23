@@ -6,7 +6,7 @@
     "scripts": {
         "dev": "nodemon run.js",
         "prod": "node run.js",
-        "test": "npx jest"
+        "test": "npx jest --coverage"
     },
     "dependencies": {
         "axios": "^1.4.0",

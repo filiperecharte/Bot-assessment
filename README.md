@@ -44,7 +44,7 @@ Stop containers:
 
 ```
 docker-compose down \\stop both containers
-docker-compose down bot \\stop bot container (to setup other bot)
+docker-compose down bot \\stop bot container (e.g to run other bot)
 ```
 
 ## Database
