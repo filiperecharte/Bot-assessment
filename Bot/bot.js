@@ -2,11 +2,9 @@ const axios = require('axios');
 
 const {saveAlert} = require('./database.js');
 
-var fetching;
-
 function startFetch(botConfig) {
     fetch(botConfig);
-    fetching = setInterval(() => fetch(botConfig), botConfig.fetchInterval * 1000);
+    setInterval(() => fetch(botConfig), botConfig.fetchInterval * 1000);
 }
 
 function fetch(botConfig) {
@@ -88,16 +86,11 @@ function handleErrors(botConfig, error, currencyPair) {
     }
 }
 
-function stopFetch() {
-    clearInterval(fetching);
-}
-
 module.exports = {
     fetch,
     handleFetch,
     setupFetch,
     handleErrors,
     startFetch,
-    stopFetch,
     createAlert,
 };
