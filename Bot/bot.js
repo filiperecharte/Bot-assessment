@@ -48,9 +48,9 @@ function handleFetch(botConfig, currentFetch) {
     const currentFetchRate = botConfig.rate === 'BID' ? currentFetch.bidRate : currentFetch.askRate;
 
     // Calculate the percentage change
-    currentFetch.percentageChange = currentInitialRate === 0 ? 0 : Math.abs(((currentFetchRate - currentInitialRate) / currentInitialRate) * 100).toFixed(2);
+    currentFetch.percentageChange = currentInitialRate === 0 ? 0 : (((currentFetchRate - currentInitialRate) / currentInitialRate) * 100).toFixed(2);
 
-    if (currentFetch.percentageChange >= botConfig.oscillation) {
+    if (Math.abs(currentFetch.percentageChange) >= botConfig.oscillation) {
         createAlert(botConfig, currentFetch);
     }
 }
@@ -61,7 +61,7 @@ function createAlert(botConfig, currentFetch) {
         currencyPair: currentFetch.currencyPair,
         rate: botConfig.rate,
         direction: currentFetch.percentageChange > 0 ? 'UP' : 'DOWN',
-        percentageChange: currentFetch.percentageChange,
+        percentageChange: Math.abs(currentFetch.percentageChange),
         date: currentFetch.date,
     };
 
